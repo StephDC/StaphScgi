@@ -20,9 +20,9 @@ ResponseError = common.ResponseError
 
 __doc__ = "SCGI Server based on email module for header - content processing"
 
-PATH_PREFIX = config.PATH_PREFIX
+PATH_PREFIX = config.CONFIG["prefix"]
 ## 1 MiB Header Limit
-MAX_HEAD_LEN = config.MAX_HEAD_LEN
+MAX_HEAD_LEN = config.CONFIG["maxsize"]["head"]
 AVAIL_MOD = {}
 
 async def process_request(
@@ -40,7 +40,7 @@ async def process_request(
         path = path[len(PATH_PREFIX):]
     (header.add_header, header.replace_header)["DOCUMENT_URI" in header]("DOCUMENT_URI", path)
     modname = path[1:].split(".",1)[0].split("/",1)[0]
-    if path == "/":
+    if path in "/":
         modname = "index"
     if os.path.isfile(modname+".py") or os.path.isdir(modname):
         ## External handler
@@ -132,8 +132,8 @@ async def handle(stdin, stdout):
 
 async def main():
     """ Main function for invocation via cmdline """
-    server = await config.SERVER.start(handle)
-    print("Started", config.SERVER)
+    server = await config.CONFIG["server"].start(handle)
+    print("Started", config.CONFIG["server"])
     stop_request = asyncio.Event()
     loop = asyncio.get_event_loop()
     loop.add_signal_handler(signal.SIGINT, stop_request.set)
@@ -141,7 +141,7 @@ async def main():
     server.close()
     if sys.version_info.minor >= 7:
         await server.wait_closed()
-    print("Stopped", config.SERVER)
+    print("Stopped", config.CONFIG["server"])
 
 if __name__ == "__main__":
     if sys.version_info.minor < 7:

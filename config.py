@@ -1,26 +1,36 @@
-# /usr/bin/python3
+#! /usr/bin/python3
 
-## Boilerplates, do not modify
+import configparser
 import common
-__doc__ = "Configuration file for StaphSCGI. Do NOT execute!"
-## Boilerplate ends. Your config starts here.
+__doc__ = "Configuration file loader for StaphSCGI."
 
-## Server Definitions
+CONFIG={}
 
-### Server - Set the server type and listen parameter
-### We support Unix Socket and Network Socket.
-### Use one of the following to configure the server.
+def load(path: str = "config.ini"):
+    "Load config file and apply to common"
+    config = configparser.ConfigParser()
+    config.read(path)
 
-# SERVER = common.server.UnixServer( path = "/run/scgiserver" )
-SERVER = common.server.NetServer( host = "127.114514", port = 1919810 )
+    ## Server Definitions
+    if config["Server"]["type"] == "net":
+        server = common.server.NetServer(
+            host = config["Server"]["host"],
+            port = config["Server"].getint("port")
+        )
+    elif config["Server"]["type"] == "unix":
+        server = common.server.UnixServer( path = config["Server"]["path"] )
+    else:
+        raise NotImplementedError()
+    CONFIG["server"] = server
 
-### Path Prefix - Set the path prefix when accessed through HTTP
-PATH_PREFIX = "/cgi-bin"
+    ## Path Prefix - Set the path prefix when accessed through HTTP
+    CONFIG["prefix"] = config["Path"]["prefix"]
+    CONFIG["maxsize"] = {
+        "head": config["Tuning"].getint("max head size"),
+        "body": config["Tuning"].getint("max body size")
+    }
+    common.field.MAX_CONTENT_LENGTH = CONFIG["maxsize"]["body"]
 
-## Tuning
-MAX_HEAD_LEN = 1<<20
-MAX_BODY_LEN = 1<<32
-
-## Boilerplate Applier, do not modify
-common.field.MAX_CONTENT_LENGTH = MAX_BODY_LEN
-## Boilerplate ends
+load()
+if __name__ == "__main__":
+    print(CONFIG)
